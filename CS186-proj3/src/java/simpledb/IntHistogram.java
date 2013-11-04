@@ -35,7 +35,7 @@ public class IntHistogram {
     	this.histogramBuckets = new int[buckets]; // Java array initialized to all 0's by default
     	this.maxVal = max;
     	this.minVal = min;
-    	this.bucketWidth = (double) (max - min) / buckets;
+    	this.bucketWidth = (double) (this.maxVal - this.minVal) / buckets;
     	this.totalTuples = 0;
     }
 
@@ -47,18 +47,18 @@ public class IntHistogram {
     	// some code goes here
     	
     	this.totalTuples += 1;
-    	// subtract the minimum for correct bucket placement
-    	int normalizedV = v - this.minVal;
-    	int targetBucket = (int) Math.floor(normalizedV / this.bucketWidth);
     	
-    	// CLEAN UP, handle max bucket case better
-    	if(targetBucket == this.histogramBuckets.length){
+    	// subtract the minimum for correct bucket placement
+    	// TODO: make sure handles case when minVal is negative
+    	int normalizedV = Math.abs(v - this.minVal);
 
-        	this.histogramBuckets[targetBucket-1] += 1;
-    	}else{
-
-        	this.histogramBuckets[targetBucket] += 1;
+    	int targetBucket = (int) Math.floor(normalizedV / this.bucketWidth);
+    	if(normalizedV == this.maxVal){
+    		targetBucket = this.histogramBuckets.length -1;
     	}
+    	
+        this.histogramBuckets[targetBucket] += 1;
+    	
     }
 
     /**
