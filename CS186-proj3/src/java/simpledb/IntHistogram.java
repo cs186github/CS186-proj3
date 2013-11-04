@@ -7,7 +7,7 @@ import java.util.Arrays;
 public class IntHistogram {
 
 	// An that will store the histogram.
-	private int[] histogramBuckets;
+	private int[] histogram;
 	private int maxVal;
 	private int minVal;
 	private double bucketWidth;
@@ -32,7 +32,7 @@ public class IntHistogram {
     public IntHistogram(int buckets, int min, int max) {
     	// some code goes here
     	
-    	this.histogramBuckets = new int[buckets]; // Java array initialized to all 0's by default
+    	this.histogram = new int[buckets]; // Java array initialized to all 0's by default
     	this.maxVal = max;
     	this.minVal = min;
     	this.bucketWidth = (double) (this.maxVal - this.minVal) / buckets;
@@ -47,17 +47,8 @@ public class IntHistogram {
     	// some code goes here
     	
     	this.totalTuples += 1;
-    	
-    	// subtract the minimum for correct bucket placement
-    	// TODO: make sure handles case when minVal is negative
-    	int normalizedV = Math.abs(v - this.minVal);
-
-    	int targetBucket = (int) Math.floor(normalizedV / this.bucketWidth);
-    	if(normalizedV == this.maxVal){
-    		targetBucket = this.histogramBuckets.length -1;
-    	}
-    	
-        this.histogramBuckets[targetBucket] += 1;
+    	int targetBucket = this.mapValueToBucket(v);
+        this.histogram[targetBucket] += 1;
     	
     }
 
@@ -74,11 +65,11 @@ public class IntHistogram {
     public double estimateSelectivity(Predicate.Op op, int v) {
 
     	// some code goes here
-    	int targetBucket = (int) ((v-this.minVal)/this.bucketWidth);
+    	int targetBucket = this.mapValueToBucket(v);
     	double estimate = -1.0;
     	switch(op){
     	case EQUALS:
-    		estimate = (double) this.histogramBuckets[targetBucket]/this.totalTuples;
+    		estimate = (double) this.histogram[targetBucket]/this.totalTuples;
     		break;
     	case GREATER_THAN:
     		
@@ -90,7 +81,7 @@ public class IntHistogram {
     	case GREATER_THAN_OR_EQ:
     		break;
     	case NOT_EQUALS:
-    		estimate = (double) (this.histogramBuckets.length - this.histogramBuckets[targetBucket])/this.totalTuples;
+    		estimate = (double) 1-this.histogram[targetBucket]/this.totalTuples;;
     		break;
     	case LIKE:
         	//TODO: Not sure how to handle LIKE operator
@@ -112,7 +103,7 @@ public class IntHistogram {
     public double avgSelectivity()
     {
         // some code goes here
-        return 1/this.histogramBuckets.length;
+        return 1/this.histogram.length;
     }
     
     /**
@@ -121,6 +112,20 @@ public class IntHistogram {
     public String toString() {
 
         // some code goes here
-        return Arrays.toString(this.histogramBuckets);
+        return Arrays.toString(this.histogram);
+    }
+    
+    /**
+     * Helper function for mapping value to bucket.
+     */
+    private int mapValueToBucket(int value){
+    	if(value == this.maxVal){
+    		return this.histogram.length-1;
+    	}else{
+        	// subtract the minimum for correct bucket placement
+        	// TODO: make sure handles case when minVal is negative
+        	int normalizedV = Math.abs(value - this.minVal);
+        	return (int) Math.floor(normalizedV/this.bucketWidth);
+    	}
     }
 }
