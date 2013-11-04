@@ -1,9 +1,18 @@
 package simpledb;
 
+import java.util.Arrays;
+
 /** A class to represent a fixed-width histogram over a single integer-based field.
  */
 public class IntHistogram {
 
+	// An that will store the histogram.
+	private int[] histogramBuckets;
+	private int maxVal;
+	private int minVal;
+	private double bucketWidth;
+	private int totalTuples;
+	
     /**
      * Create a new IntHistogram.
      * 
@@ -22,6 +31,12 @@ public class IntHistogram {
      */
     public IntHistogram(int buckets, int min, int max) {
     	// some code goes here
+    	
+    	this.histogramBuckets = new int[buckets]; // Java array initialized to all 0's by default
+    	this.maxVal = max;
+    	this.minVal = min;
+    	this.bucketWidth = (double) (max - min) / buckets;
+    	this.totalTuples = 0;
     }
 
     /**
@@ -30,6 +45,20 @@ public class IntHistogram {
      */
     public void addValue(int v) {
     	// some code goes here
+    	
+    	this.totalTuples += 1;
+    	// subtract the minimum for correct bucket placement
+    	int normalizedV = v - this.minVal;
+    	int targetBucket = (int) Math.floor(normalizedV / this.bucketWidth);
+    	
+    	// CLEAN UP, handle max bucket case better
+    	if(targetBucket == this.histogramBuckets.length){
+
+        	this.histogramBuckets[targetBucket-1] += 1;
+    	}else{
+
+        	this.histogramBuckets[targetBucket] += 1;
+    	}
     }
 
     /**
@@ -45,7 +74,31 @@ public class IntHistogram {
     public double estimateSelectivity(Predicate.Op op, int v) {
 
     	// some code goes here
-        return -1.0;
+    	int targetBucket = (int) ((v-this.minVal)/this.bucketWidth);
+    	double estimate = -1.0;
+    	switch(op){
+    	case EQUALS:
+    		estimate = (double) this.histogramBuckets[targetBucket]/this.totalTuples;
+    		break;
+    	case GREATER_THAN:
+    		
+    		break;
+    	case LESS_THAN:
+    		break;
+    	case LESS_THAN_OR_EQ:
+    		break;
+    	case GREATER_THAN_OR_EQ:
+    		break;
+    	case NOT_EQUALS:
+    		estimate = (double) (this.histogramBuckets.length - this.histogramBuckets[targetBucket])/this.totalTuples;
+    		break;
+    	case LIKE:
+        	//TODO: Not sure how to handle LIKE operator
+    		break;
+		default:
+			break;
+    	}
+        return estimate;
     }
     
     /**
@@ -59,7 +112,7 @@ public class IntHistogram {
     public double avgSelectivity()
     {
         // some code goes here
-        return 1.0;
+        return 1/this.histogramBuckets.length;
     }
     
     /**
@@ -68,6 +121,6 @@ public class IntHistogram {
     public String toString() {
 
         // some code goes here
-        return null;
+        return Arrays.toString(this.histogramBuckets);
     }
 }
