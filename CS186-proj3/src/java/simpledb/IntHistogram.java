@@ -66,29 +66,75 @@ public class IntHistogram {
 
     	// some code goes here
     	int targetBucket = this.mapValueToBucket(v);
-    	double estimate = -1.0;
+    	double estimate = 0.0;
+    	double bucketValue = 0;
+    	double bucketSelectivity = 0;
+    	double bucketFraction = 0;
+		double bucketSum = 0;
     	switch(op){
     	case EQUALS:
     		estimate = (double) this.histogram[targetBucket]/this.totalTuples;
     		break;
     	case GREATER_THAN:
-    		
+    		for(int i=targetBucket;i<this.histogram.length;i++){
+    			bucketSum += this.histogram[i];
+    		}
+    		estimate = bucketSum/this.totalTuples;
     		break;
     	case LESS_THAN:
+    		for(int i=0;i<targetBucket;i++){
+    			bucketSum += this.histogram[i];
+    		}
+    		estimate = bucketSum/this.totalTuples;
     		break;
     	case LESS_THAN_OR_EQ:
+    		if(v <= this.minVal){
+    			return 0;
+    		} else if(v >= this.maxVal){
+    			return 1;
+    		}
+    		bucketValue = (targetBucket)*this.bucketWidth;
+    		// We assume uniform distribution within the bucket
+    		double fractionBucket = Math.abs(bucketValue-v)/this.bucketWidth;
+    		bucketSelectivity = fractionBucket*this.histogram[targetBucket];
+    		
+    		estimate = bucketSelectivity;
+    		for(int i=0;i<targetBucket;i++){
+    			bucketSum += this.histogram[i];
+    		}
+    		estimate += bucketSum/this.totalTuples;
     		break;
     	case GREATER_THAN_OR_EQ:
+    		if(v >= this.maxVal){
+    			return 0;
+    		} else if(v<=this.minVal){
+    			return 1;
+    		}
+    		bucketValue = (targetBucket+1)*this.bucketWidth;
+    		
+    		// We assume uniform distribution within the bucket
+    		fractionBucket = Math.abs(bucketValue-v)/this.bucketWidth;
+    		bucketSelectivity = fractionBucket*this.histogram[targetBucket];
+    		
+    		estimate = bucketSelectivity;
+
+    		for(int i=targetBucket+1;i<this.histogram.length;i++){
+    			bucketSum += this.histogram[i];
+    		}
+    		estimate += bucketSum/this.totalTuples;
     		break;
     	case NOT_EQUALS:
     		estimate = (double) 1-this.histogram[targetBucket]/this.totalTuples;;
     		break;
     	case LIKE:
-        	//TODO: Not sure how to handle LIKE operator
+        	//TODO: According to GSI's response handle LIKE as EQUALS
+    		estimate = (double) this.histogram[targetBucket]/this.totalTuples;
     		break;
 		default:
-			break;
+    		estimate = (double) this.histogram[targetBucket]/this.totalTuples;
+    		break;
     	}
+    	System.out.println("estimate: "+estimate);
         return estimate;
     }
     
@@ -121,9 +167,12 @@ public class IntHistogram {
     private int mapValueToBucket(int value){
     	if(value == this.maxVal){
     		return this.histogram.length-1;
-    	}else{
+    	}else if(value > this.maxVal){
+    		return this.histogram.length;
+    	}else if(value <= this.minVal){
+    		return 0;
+    	}else {
         	// subtract the minimum for correct bucket placement
-        	// TODO: make sure handles case when minVal is negative
         	int normalizedV = Math.abs(value - this.minVal);
         	return (int) Math.floor(normalizedV/this.bucketWidth);
     	}
