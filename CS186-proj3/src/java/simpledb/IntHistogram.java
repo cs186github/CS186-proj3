@@ -148,9 +148,7 @@ public class IntHistogram {
 			estimate = this.estimateSelectivity(Predicate.Op.EQUALS, v);
 			break;
 		}
-		if(estimate > 1){
-			System.out.println("FAIL!");
-		}
+		
 		return estimate;
 	}
 
@@ -172,7 +170,15 @@ public class IntHistogram {
 	public String toString() {
 
 		// some code goes here
-		return Arrays.toString(this.histogram);
+		String outputString = new String("{");
+		double count = this.minVal;
+		for(int i = 0; i<this.histogram.length; i++){
+			
+			outputString += "["+count+"-"+(count+this.bucketWidth)+"]: "+this.histogram[i]+",";
+			count += this.bucketWidth;
+		}
+		outputString += "}";
+		return outputString;
 	}
 
 	/**
