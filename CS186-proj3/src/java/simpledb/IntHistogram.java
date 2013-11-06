@@ -83,9 +83,13 @@ public class IntHistogram {
 		int targetBucket = this.mapValueToBucket(v);
 		double estimate = 0.0;
 		double bucketSum = 0;
+		double borderVal =0;
+		double bucketPart = 0;
 		switch (op) {
 		case EQUALS:
-			estimate = (double) this.histogram[targetBucket] / this.totalTuples; // h/w/ntup
+
+			int bucketHeight = this.histogram[targetBucket];
+			estimate = (double) (bucketHeight/this.bucketWidth) / this.totalTuples; // h/w/ntup
 			break;
 		case GREATER_THAN:
 			if (v > this.maxVal) {
@@ -93,7 +97,8 @@ public class IntHistogram {
 			} else if (v < this.minVal) {
 				return 1;
 			}
-			for (int i = targetBucket; i < this.histogram.length; i++) {
+			// targetBucket+1 because we want to skip to next bucket
+			for (int i = targetBucket+1; i < this.histogram.length; i++) {
 				bucketSum += this.histogram[i];
 			}
 			estimate = bucketSum / this.totalTuples;
@@ -115,12 +120,10 @@ public class IntHistogram {
 			} else if (v < this.minVal) {
 				return 0;
 			}
-			double b_part1 = this.estimateSelectivity(Predicate.Op.EQUALS, v);
-			double b_right1 = this.minVal + (targetBucket+1)* this.bucketWidth;
-			double b_fraction1 = (double) Math.abs(v-b_right1)/ this.bucketWidth;
-			double b_selectivity1 = b_part1 * b_fraction1;
-			double b_other1 = this.estimateSelectivity(Predicate.Op.LESS_THAN, (int) Math.ceil(b_right1-this.bucketWidth));
-			estimate = b_selectivity1 + b_other1;
+			bucketPart = this.estimateSelectivity(Predicate.Op.EQUALS, v);
+			borderVal = this.minVal + (targetBucket+1)* this.bucketWidth;
+			estimate = bucketPart * (double) Math.abs(v-borderVal)/ this.bucketWidth;
+			estimate += this.estimateSelectivity(Predicate.Op.LESS_THAN, v);
 			break;
 		case GREATER_THAN_OR_EQ:
 
@@ -129,12 +132,10 @@ public class IntHistogram {
 			} else if (v < this.minVal) {
 				return 1;
 			}
-			double b_part = this.estimateSelectivity(Predicate.Op.EQUALS, v);
-			double b_right = this.minVal + (targetBucket + 1)* this.bucketWidth;
-			double b_fraction = (double) Math.abs(b_right - v)/ this.bucketWidth;
-			double b_selectivity = b_part * b_fraction;
-			double b_other = this.estimateSelectivity(Predicate.Op.GREATER_THAN, (int) Math.ceil(b_right));
-			estimate = b_selectivity + b_other;
+			bucketPart = this.estimateSelectivity(Predicate.Op.EQUALS, v);
+			borderVal = this.minVal + (targetBucket + 1)* this.bucketWidth;
+			estimate = bucketPart * (double) Math.abs(borderVal - v)/ this.bucketWidth;
+			estimate += this.estimateSelectivity(Predicate.Op.GREATER_THAN, v);
 			break;
 		case NOT_EQUALS:
 			estimate = (double) 1 - this.estimateSelectivity(Predicate.Op.EQUALS, v);
@@ -146,6 +147,9 @@ public class IntHistogram {
 		default:
 			estimate = this.estimateSelectivity(Predicate.Op.EQUALS, v);
 			break;
+		}
+		if(estimate > 1){
+			System.out.println("FAIL!");
 		}
 		return estimate;
 	}
