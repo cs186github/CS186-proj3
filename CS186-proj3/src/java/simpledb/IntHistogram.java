@@ -91,8 +91,13 @@ public class IntHistogram {
 			if (v > this.maxVal || v < this.minVal) {
 				return 0;
 			}
+			//TODO: I had to modify the original formula they gave us by finding how many buckets per int
+			int bucketsPerInt = this.histogram.length/(this.maxVal - this.minVal+1);
+			if(this.bucketWidth>1){
+				bucketsPerInt = 1;
+			}
 			int bucketHeight = this.histogram[targetBucket];
-			estimate = (double) (bucketHeight/this.bucketWidth) / this.totalTuples; // h/w/ntup
+			estimate = (double) (bucketHeight/this.bucketWidth)/bucketsPerInt / this.totalTuples; // h/w/ntup
 			break;
 		case GREATER_THAN:
 			if (v > this.maxVal) {
@@ -118,9 +123,9 @@ public class IntHistogram {
 			estimate = bucketSum / this.totalTuples;
 			break;
 		case LESS_THAN_OR_EQ:
-			if (v > this.maxVal) {
+			if (v >= this.maxVal) {
 				return 1;
-			} else if (v < this.minVal) {
+			} else if (v <= this.minVal) {
 				return 0;
 			}
 			bucketPart = this.estimateSelectivity(Predicate.Op.EQUALS, v);
@@ -130,9 +135,9 @@ public class IntHistogram {
 			break;
 		case GREATER_THAN_OR_EQ:
 
-			if (v > this.maxVal) {
+			if (v >= this.maxVal) {
 				return 0;
-			} else if (v < this.minVal) {
+			} else if (v <= this.minVal) {
 				return 1;
 			}
 			bucketPart = this.estimateSelectivity(Predicate.Op.EQUALS, v);
