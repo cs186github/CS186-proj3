@@ -1,8 +1,11 @@
 package simpledb;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -16,7 +19,14 @@ public class TableStats {
     private static final ConcurrentHashMap<String, TableStats> statsMap = new ConcurrentHashMap<String, TableStats>();
 
     static final int IOCOSTPERPAGE = 1000;
-
+    private int numTuples = 0;
+    private int ioCost = IOCOSTPERPAGE;
+    private HeapFile targetTable;
+    private TupleDesc tableTD;
+    private HashMap<Integer,Integer[]> intStats;
+    private HashMap<Integer, IntHistogram> intHists;
+    private HashMap<Integer, StringHistogram> stringHists;
+    
     public static TableStats getTableStats(String tablename) {
         return statsMap.get(tablename);
     }
@@ -85,6 +95,105 @@ public class TableStats {
         // necessarily have to (for example) do everything
         // in a single scan of the table.
         // some code goes here
+    	
+    	
+    	//NOTE: important design decision is made in the way we implement the 
+    	// iteration process. If we do tuple by tuple but compute all fields 
+    	// at the same time we take O(n) time but O(n^2) space. If we iterate 
+    	// over each field and then by each tuple, we take O(n^2) time and
+    	// O(n) space. 
+    	
+    	this.ioCost = ioCostPerPage;
+    	this.targetTable = (HeapFile) Database.getCatalog().getDbFile(tableid);
+    	this.tableTD = this.targetTable.getTupleDesc();
+    	this.intStats = new HashMap<Integer,Integer[]>();
+    	this.intHists = new HashMap<Integer,IntHistogram>();
+    	this.stringHists = new HashMap<Integer,StringHistogram>();
+    	
+    	Transaction tran = new Transaction();
+    	tran.start();
+    	DbFileIterator iter = this.targetTable.iterator(tran.getId());
+    	
+    	// first scan through table, compute min and max. Fill in stringHist
+    	try {
+			iter.open();
+			while(iter.hasNext()){
+				Tuple tup = iter.next();
+				for(int i=0;i<this.tableTD.numFields();i++){
+					Field f = tup.getField(i);
+					Type fieldType = f.getType();
+					switch(fieldType){
+					case INT_TYPE:
+
+						Integer[] minAndMax = new Integer[2];
+						int fieldValue = ((IntField) f).getValue();
+						if(!this.intStats.containsKey(i)){
+							minAndMax[0] = fieldValue;
+							minAndMax[1] = fieldValue;
+						}else{
+							Integer min = this.intStats.get(i)[0];
+							Integer max = this.intStats.get(i)[1];
+							
+							if(fieldValue<min){
+								min = fieldValue;
+							}
+							if(fieldValue>max){
+								max = fieldValue;
+							}
+							minAndMax[0] = min;
+							minAndMax[1] = max;
+							
+						}
+
+						this.intStats.put(i, minAndMax);
+						break;
+					case STRING_TYPE:
+						StringField s = (StringField) tup.getField(i);
+						this.stringHists.get(f).addValue(s.getValue());
+						break;
+					default:
+						System.out.println("Unsupported Field Type");
+						break;
+					}
+				}
+				this.numTuples += 1;
+			}
+			iter.rewind();
+			
+			// second iteration to actually populate intHistogram
+			
+			while(iter.hasNext()){
+				Tuple tup = iter.next();
+				for(Entry<Integer, Integer[]> fieldStats:this.intStats.entrySet()){
+					int min = fieldStats.getValue()[0];
+					int max = fieldStats.getValue()[1];
+					
+					IntHistogram h; 
+					if(!this.intHists.containsKey(fieldStats.getKey())){
+						h = new IntHistogram(NUM_HIST_BINS,min,max);
+					} else {
+						h = this.intHists.get(fieldStats.getKey());
+					}
+					h.addValue(((IntField) tup.getField(fieldStats.getKey())).getValue());
+					this.intHists.put(fieldStats.getKey(), h);
+				}
+			}
+
+			iter.close();
+
+	    	tran.commit();
+		} catch (DbException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (TransactionAbortedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			
+			e.printStackTrace();
+		}
+    	
     }
 
     /**
@@ -101,7 +210,7 @@ public class TableStats {
      */
     public double estimateScanCost() {
         // some code goes here
-        return 0;
+        return this.targetTable.numPages()*this.ioCost;
     }
 
     /**
@@ -115,7 +224,8 @@ public class TableStats {
      */
     public int estimateTableCardinality(double selectivityFactor) {
         // some code goes here
-        return 0;
+    	//TODO: no particular reason for ceil or floor
+        return (int) Math.ceil(this.numTuples*selectivityFactor);
     }
 
     /**
@@ -148,7 +258,19 @@ public class TableStats {
      */
     public double estimateSelectivity(int field, Predicate.Op op, Field constant) {
         // some code goes here
-        return 1.0;
+    	Type fieldType = this.tableTD.getFieldType(field);
+    	// find field
+    	switch(fieldType){
+    	case INT_TYPE:
+    		IntHistogram h = this.intHists.get(field);
+    		return h.estimateSelectivity(op, ((IntField) constant).getValue());
+    	case STRING_TYPE:
+    		StringHistogram s = this.stringHists.get(field);
+    		return s.estimateSelectivity(op, ((StringField) constant).getValue());
+    	default:
+    		System.out.println("Unsupported Type");
+            return 1.0;
+    	}
     }
 
     /**
@@ -156,7 +278,7 @@ public class TableStats {
      * */
     public int totalTuples() {
         // some code goes here
-        return 0;
+        return this.numTuples;
     }
 
 }

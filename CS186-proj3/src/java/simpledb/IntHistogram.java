@@ -88,6 +88,9 @@ public class IntHistogram {
 		switch (op) {
 		case EQUALS:
 
+			if (v > this.maxVal || v < this.minVal) {
+				return 0;
+			}
 			int bucketHeight = this.histogram[targetBucket];
 			estimate = (double) (bucketHeight/this.bucketWidth) / this.totalTuples; // h/w/ntup
 			break;
