@@ -292,7 +292,31 @@ public class JoinOptimizer {
 
         // some code goes here
         //Replace the following
-        return joins;
+    	PlanCache optjoin = new PlanCache();
+    	Set<LogicalJoinNode> j = new HashSet<LogicalJoinNode>();
+    	for (int i = 1; i <= joins.size(); i++) {
+    		Set<Set<LogicalJoinNode>> subsets = this.enumerateSubsets(joins, i);
+    		for (Set<LogicalJoinNode> subset : subsets) {
+    			CostCard bestPlan = new CostCard();
+    			bestPlan.cost = Double.POSITIVE_INFINITY;
+    			for (LogicalJoinNode joinToRemove : subset) {
+    				CostCard plan = this.computeCostAndCardOfSubplan(stats, filterSelectivities, joinToRemove, subset, bestPlan.cost, optjoin);
+    				if (plan != null) {
+    					if (plan.cost < bestPlan.cost) {
+    						bestPlan = plan;
+    					}
+    				}
+    			}
+    			optjoin.addPlan(subset, bestPlan.cost, bestPlan.card, bestPlan.plan);
+    			if (i == joins.size()) {
+    				j = subset;
+    			}
+    		}
+    	}
+    	if (explain) {
+    		this.printJoins(joins, optjoin, stats, filterSelectivities);
+    	}
+    	return optjoin.getOrder(j);
     }
 
     // ===================== Private Methods =================================
