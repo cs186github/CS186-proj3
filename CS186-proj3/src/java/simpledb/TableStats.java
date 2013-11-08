@@ -149,7 +149,15 @@ public class TableStats {
 						break;
 					case STRING_TYPE:
 						StringField s = (StringField) tup.getField(i);
-						this.stringHists.get(f).addValue(s.getValue());
+						StringHistogram h;
+						if(!this.stringHists.containsKey(f)){
+							h = new StringHistogram(NUM_HIST_BINS); 
+							
+						}else{
+							h = this.stringHists.get(i);
+						}
+						h.addValue( ( ((StringField) f).getValue()));
+						this.stringHists.put(i, h);
 						break;
 					default:
 						System.out.println("Unsupported Field Type");
