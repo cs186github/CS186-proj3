@@ -46,6 +46,9 @@ public class IntHistogram {
 		this.maxVal = max;
 		this.minVal = min;
 		this.bucketWidth = (double) (this.maxVal - this.minVal + 1) / buckets;
+		if(this.bucketWidth < 1){
+			this.bucketWidth = 1;
+		}
 		this.totalTuples = 0;
 	}
 
@@ -91,13 +94,8 @@ public class IntHistogram {
 			if (v > this.maxVal || v < this.minVal) {
 				return 0;
 			}
-			//TODO: I had to modify the original formula they gave us by finding how many buckets per int
-			int bucketsPerInt = this.histogram.length/(this.maxVal - this.minVal+1);
-			if(this.bucketWidth>1){
-				bucketsPerInt = 1;
-			}
 			int bucketHeight = this.histogram[targetBucket];
-			estimate = (double) (bucketHeight/this.bucketWidth)/bucketsPerInt / this.totalTuples; // h/w/ntup
+			estimate = (double) (bucketHeight/this.bucketWidth)/ this.totalTuples; // h/w/ntup
 			break;
 		case GREATER_THAN:
 			if (v > this.maxVal) {
