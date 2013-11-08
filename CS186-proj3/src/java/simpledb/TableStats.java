@@ -174,7 +174,9 @@ public class TableStats {
 					} else {
 						h = this.intHists.get(fieldStats.getKey());
 					}
-					h.addValue(((IntField) tup.getField(fieldStats.getKey())).getValue());
+					int v = ((IntField) tup.getField(fieldStats.getKey())).getValue();
+					
+					h.addValue(v);
 					this.intHists.put(fieldStats.getKey(), h);
 				}
 			}
