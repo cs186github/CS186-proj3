@@ -224,7 +224,6 @@ public class JoinOptimizer {
 			if (card < java.lang.Math.max(card1, card2)) {
 				card = java.lang.Math.max(card1, card2);
 			}
-			break;
 		}
         return card <= 0 ? 1 : card;
     }
@@ -292,6 +291,9 @@ public class JoinOptimizer {
 
         // some code goes here
         //Replace the following
+    	if (joins.size() == 0) {
+    		return joins;
+    	}
     	PlanCache optjoin = new PlanCache();
     	Set<LogicalJoinNode> j = new HashSet<LogicalJoinNode>();
     	for (int i = 1; i <= joins.size(); i++) {
