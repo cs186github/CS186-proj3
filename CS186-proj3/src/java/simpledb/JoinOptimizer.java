@@ -160,7 +160,7 @@ public class JoinOptimizer {
 		case EQUALS:
 			if (t1pkey && t2pkey) {
 				// If both are primary keys, choose the cardinality of the smaller table.
-				card = java.lang.Math.min(card1, card2);
+				card = Math.min(card1, card2);
 			} else if (t1pkey) {
 				// If one is a primary key, choose the cardinality of the other table.
 				card = card2;
@@ -169,7 +169,7 @@ public class JoinOptimizer {
 				card = card1;
 			} else {
 				// If none are primary keys, choose the cardinality of the larger table.
-				card = java.lang.Math.max(card1, card2);
+				card = Math.max(card1, card2);
 			}
 			break;
 //		case GREATER_THAN:
@@ -221,8 +221,8 @@ public class JoinOptimizer {
 		default:
 			// For range joins (everything except EQUALS) the cardinality is 30% of the cross product.
 			card = card1*card2*3/10;
-			if (card < java.lang.Math.max(card1, card2)) {
-				card = java.lang.Math.max(card1, card2);
+			if (card < Math.max(card1, card2)) {
+				card = Math.max(card1, card2);
 			}
 		}
         return card <= 0 ? 1 : card;
