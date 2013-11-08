@@ -159,12 +159,16 @@ public class JoinOptimizer {
 		switch (joinOp) {
 		case EQUALS:
 			if (t1pkey && t2pkey) {
+				// If both are primary keys, choose the cardinality of the smaller table.
 				card = java.lang.Math.min(card1, card2);
 			} else if (t1pkey) {
+				// If one is a primary key, choose the cardinality of the other table.
 				card = card2;
 			} else if (t2pkey) {
+				// If one is a primary key, choose the cardinality of the other table.
 				card = card1;
 			} else {
+				// If none are primary keys, choose the cardinality of the larger table.
 				card = java.lang.Math.max(card1, card2);
 			}
 			break;
@@ -174,47 +178,48 @@ public class JoinOptimizer {
 //		case LESS_THAN:
 //			
 //			break;
-		case LESS_THAN_OR_EQ:
-			card = card1*card2*3/10;
-			if (card < java.lang.Math.max(card1, card2)) {
-				card = java.lang.Math.max(card1, card2);
-			}
-			if (t1pkey && t2pkey) {
-				card += java.lang.Math.min(card1, card2);
-			} else if (t1pkey) {
-				card += card2;
-			} else if (t2pkey) {
-				card += card1;
-			} else {
-				card += java.lang.Math.max(card1, card2);
-			}
-			break;
-		case GREATER_THAN_OR_EQ:
-			card = card1*card2*3/10;
-			if (card < java.lang.Math.max(card1, card2)) {
-				card = java.lang.Math.max(card1, card2);
-			}
-			if (t1pkey && t2pkey) {
-				card += java.lang.Math.min(card1, card2);
-			} else if (t1pkey) {
-				card += card2;
-			} else if (t2pkey) {
-				card += card1;
-			} else {
-				card += java.lang.Math.max(card1, card2);
-			}
-			break;
-		case NOT_EQUALS:
-			card = card1*card2*3/10;
-			if (card < java.lang.Math.max(card1, card2)) {
-				card = java.lang.Math.max(card1, card2);
-			}
-			card *= 2;
-			break;
+//		case LESS_THAN_OR_EQ:
+//			card = card1*card2*3/10;
+//			if (card < java.lang.Math.max(card1, card2)) {
+//				card = java.lang.Math.max(card1, card2);
+//			}
+//			if (t1pkey && t2pkey) {
+//				card += java.lang.Math.min(card1, card2);
+//			} else if (t1pkey) {
+//				card += card2;
+//			} else if (t2pkey) {
+//				card += card1;
+//			} else {
+//				card += java.lang.Math.max(card1, card2);
+//			}
+//			break;
+//		case GREATER_THAN_OR_EQ:
+//			card = card1*card2*3/10;
+//			if (card < java.lang.Math.max(card1, card2)) {
+//				card = java.lang.Math.max(card1, card2);
+//			}
+//			if (t1pkey && t2pkey) {
+//				card += java.lang.Math.min(card1, card2);
+//			} else if (t1pkey) {
+//				card += card2;
+//			} else if (t2pkey) {
+//				card += card1;
+//			} else {
+//				card += java.lang.Math.max(card1, card2);
+//			}
+//			break;
+//		case NOT_EQUALS:
+//			card = card1*card2*3/10;
+//			if (card < java.lang.Math.max(card1, card2)) {
+//				card = java.lang.Math.max(card1, card2);
+//			}
+//			card *= 2;
+//			break;
 //		case LIKE:
 //			
 //			break;
 		default:
+			// For range joins (everything except EQUALS) the cardinality is 30% of the cross product.
 			card = card1*card2*3/10;
 			if (card < java.lang.Math.max(card1, card2)) {
 				card = java.lang.Math.max(card1, card2);
